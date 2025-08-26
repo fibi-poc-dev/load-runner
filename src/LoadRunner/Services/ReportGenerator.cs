@@ -201,6 +201,25 @@ public class ReportGenerator : IReportGenerator
             position: relative;
             height: 400px;
             margin: 2rem 0;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .chart-container h3 {
+            margin: 0 0 1rem 0;
+            color: #495057;
+            font-size: 1.1rem;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 0.5rem;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
         }
         table {
             width: 100%;
@@ -409,11 +428,31 @@ public class ReportGenerator : IReportGenerator
     private string GenerateChartsSection(List<TestExecutionResult> results)
     {
         return @"
-            <div class=""chart-container"">
-                <canvas id=""responseTimeChart""></canvas>
-            </div>
-            <div class=""chart-container"">
-                <canvas id=""throughputChart""></canvas>
+            <div class=""charts-grid"">
+                <div class=""chart-container"">
+                    <h3>Overall Response Time Timeline</h3>
+                    <canvas id=""responseTimeChart""></canvas>
+                </div>
+                <div class=""chart-container"">
+                    <h3>Overall Throughput</h3>
+                    <canvas id=""throughputChart""></canvas>
+                </div>
+                <div class=""chart-container"">
+                    <h3>Per-API Response Time Comparison</h3>
+                    <canvas id=""apiResponseTimeChart""></canvas>
+                </div>
+                <div class=""chart-container"">
+                    <h3>API Performance Spider Chart</h3>
+                    <canvas id=""spiderChart""></canvas>
+                </div>
+                <div class=""chart-container"">
+                    <h3>API Request Distribution</h3>
+                    <canvas id=""apiDistributionChart""></canvas>
+                </div>
+                <div class=""chart-container"">
+                    <h3>Success Rate by API</h3>
+                    <canvas id=""apiSuccessChart""></canvas>
+                </div>
             </div>
         ";
     }
@@ -501,7 +540,61 @@ public class ReportGenerator : IReportGenerator
     {
         var responseTimeData = JsonSerializer.Serialize(
             results.Select(r => new { x = r.Timestamp.ToString("HH:mm:ss"), y = r.ResponseTime.TotalMilliseconds }).ToList());
+
+        // Group results by API for per-API charts
+        var apiGroups = results.GroupBy(r => r.RequestName).ToList();
         
+        // Prepare data for API-specific charts
+        var apiNames = apiGroups.Select(g => g.Key).ToList();
+        var apiColors = new[] { "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#FF6384", "#C9CBCF" };
+        
+        // API Response Time Data
+        var apiResponseTimeData = apiGroups.Select((g, index) => new
+        {
+            label = g.Key,
+            data = new[] { g.Average(r => r.ResponseTime.TotalMilliseconds) },
+            backgroundColor = apiColors[index % apiColors.Length]
+        }).ToList();
+        
+        // API Success Rate Data
+        var apiSuccessData = apiGroups.Select((g, index) => new
+        {
+            label = g.Key,
+            data = new[] { (double)g.Count(r => r.IsSuccess) / g.Count() * 100 },
+            backgroundColor = apiColors[index % apiColors.Length]
+        }).ToList();
+        
+        // API Distribution Data
+        var apiDistributionData = apiGroups.Select((g, index) => new
+        {
+            label = g.Key,
+            data = g.Count(),
+            backgroundColor = apiColors[index % apiColors.Length]
+        }).ToList();
+        
+        // Spider Chart Data - normalized metrics (0-100 scale)
+        var spiderData = apiGroups.Select((g, index) => 
+        {
+            var responseTimes = g.Select(r => r.ResponseTime.TotalMilliseconds).ToList();
+            var avgResponseTime = responseTimes.Average();
+            var successRate = (double)g.Count(r => r.IsSuccess) / g.Count() * 100;
+            var validationRate = g.Where(r => r.ValidationResult != null).Any() 
+                ? (double)g.Count(r => r.ValidationResult?.IsSuccess == true) / g.Count(r => r.ValidationResult != null) * 100 
+                : 100;
+            
+            // Normalize response time (assuming 100ms is baseline good, 0ms is perfect)
+            var normalizedResponseTime = Math.Max(0, 100 - Math.Min(100, avgResponseTime));
+            
+            return new
+            {
+                label = g.Key,
+                data = new[] { normalizedResponseTime, successRate, validationRate, (double)g.Count() / results.Count * 100 },
+                backgroundColor = $"rgba({GetRgbFromHex(apiColors[index % apiColors.Length])}, 0.2)",
+                borderColor = apiColors[index % apiColors.Length],
+                borderWidth = 2
+            };
+        }).ToList();
+
         return $@"
         // Response Time Chart
         const ctx1 = document.getElementById('responseTimeChart').getContext('2d');
@@ -513,17 +606,15 @@ public class ReportGenerator : IReportGenerator
                     data: {responseTimeData},
                     borderColor: '#667eea',
                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    fill: true
+                    fill: true,
+                    tension: 0.4
                 }}]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {{
-                    title: {{
-                        display: true,
-                        text: 'Response Time Over Time'
-                    }}
+                    legend: {{ display: false }}
                 }},
                 scales: {{
                     x: {{
@@ -545,7 +636,6 @@ public class ReportGenerator : IReportGenerator
 
         // Throughput Chart
         const ctx2 = document.getElementById('throughputChart').getContext('2d');
-        // Simple throughput calculation - requests per minute
         const throughputData = [];
         let currentMinute = '';
         let requestCount = 0;
@@ -571,17 +661,15 @@ public class ReportGenerator : IReportGenerator
                 datasets: [{{
                     label: 'Requests per Minute',
                     data: throughputData,
-                    backgroundColor: '#28a745'
+                    backgroundColor: '#28a745',
+                    borderRadius: 4
                 }}]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {{
-                    title: {{
-                        display: true,
-                        text: 'Throughput Over Time'
-                    }}
+                    legend: {{ display: false }}
                 }},
                 scales: {{
                     x: {{
@@ -599,7 +687,147 @@ public class ReportGenerator : IReportGenerator
                 }}
             }}
         }});
+
+        // API Response Time Comparison Chart
+        const ctx3 = document.getElementById('apiResponseTimeChart').getContext('2d');
+        new Chart(ctx3, {{
+            type: 'bar',
+            data: {{
+                labels: {JsonSerializer.Serialize(apiNames)},
+                datasets: [{{
+                    label: 'Average Response Time (ms)',
+                    data: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.data[0]).ToList())},
+                    backgroundColor: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.backgroundColor).ToList())},
+                    borderRadius: 4
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ display: false }}
+                }},
+                scales: {{
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'API Endpoint'
+                        }}
+                    }},
+                    y: {{
+                        title: {{
+                            display: true,
+                            text: 'Average Response Time (ms)'
+                        }}
+                    }}
+                }}
+            }}
+        }});
+
+        // Spider Chart
+        const ctx4 = document.getElementById('spiderChart').getContext('2d');
+        new Chart(ctx4, {{
+            type: 'radar',
+            data: {{
+                labels: ['Response Time Score', 'Success Rate (%)', 'Validation Rate (%)', 'Traffic Share (%)'],
+                datasets: {JsonSerializer.Serialize(spiderData)}
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    title: {{
+                        display: true,
+                        text: 'API Performance Overview'
+                    }}
+                }},
+                scales: {{
+                    r: {{
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {{
+                            stepSize: 20
+                        }}
+                    }}
+                }}
+            }}
+        }});
+
+        // API Distribution Pie Chart
+        const ctx5 = document.getElementById('apiDistributionChart').getContext('2d');
+        new Chart(ctx5, {{
+            type: 'doughnut',
+            data: {{
+                labels: {JsonSerializer.Serialize(apiNames)},
+                datasets: [{{
+                    data: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.data).ToList())},
+                    backgroundColor: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.backgroundColor).ToList())},
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{
+                        position: 'bottom'
+                    }}
+                }}
+            }}
+        }});
+
+        // API Success Rate Chart
+        const ctx6 = document.getElementById('apiSuccessChart').getContext('2d');
+        new Chart(ctx6, {{
+            type: 'bar',
+            data: {{
+                labels: {JsonSerializer.Serialize(apiNames)},
+                datasets: [{{
+                    label: 'Success Rate (%)',
+                    data: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.data[0]).ToList())},
+                    backgroundColor: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.backgroundColor).ToList())},
+                    borderRadius: 4
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ display: false }}
+                }},
+                scales: {{
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'API Endpoint'
+                        }}
+                    }},
+                    y: {{
+                        beginAtZero: true,
+                        max: 100,
+                        title: {{
+                            display: true,
+                            text: 'Success Rate (%)'
+                        }}
+                    }}
+                }}
+            }}
+        }});
         ";
+    }
+
+    private string GetRgbFromHex(string hex)
+    {
+        hex = hex.TrimStart('#');
+        if (hex.Length == 6)
+        {
+            var r = Convert.ToInt32(hex.Substring(0, 2), 16);
+            var g = Convert.ToInt32(hex.Substring(2, 2), 16);
+            var b = Convert.ToInt32(hex.Substring(4, 2), 16);
+            return $"{r}, {g}, {b}";
+        }
+        return "0, 0, 0";
     }
 
     private bool DetermineOverallStatus(LoadTestMetrics metrics, LoadRunnerConfiguration config)
