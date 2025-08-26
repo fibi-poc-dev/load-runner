@@ -181,6 +181,60 @@ cd publish
 - `JsonPathValidations`: JSON response validation rules
 - `ResponseBodyContains`: Required text in response body
 
+### Understanding TPS and Concurrent Users Relationship
+
+The relationship between `TargetTransactionsPerSecond` and `MaxConcurrentUsers` is crucial for effective load testing:
+
+#### Mathematical Relationship
+```
+TPS = (MaxConcurrentUsers × Transactions per User per Second)
+
+Where: Transactions per User per Second = 1 / (Total Iteration Time in Seconds)
+```
+
+#### Example Calculation (Current Config)
+```
+Steps per iteration: 5 enabled steps
+Interval per step: 200ms each
+Total iteration time: 5 × 200ms = 1,000ms = 1 second
+Transactions per user per second: 1 TPS per user
+Expected total TPS: 5 users × 1 TPS = 5 TPS ✓
+```
+
+#### Configuration Scenarios
+
+| Goal TPS | Recommended Users | Interval per Step | Use Case |
+|----------|------------------|-------------------|----------|
+| 5 TPS    | 5 users         | 200ms            | Baseline testing |
+| 10 TPS   | 10 users        | 200ms            | Scale users approach |
+| 10 TPS   | 5 users         | 100ms            | Faster iterations approach |
+| 20 TPS   | 20 users        | 200ms            | High concurrency testing |
+
+#### Design Principles
+
+**For Realistic User Simulation:**
+```json
+{
+  "TargetTransactionsPerSecond": 10,
+  "MaxConcurrentUsers": 10,
+  "IntervalMs": 200  // Simulates user think time
+}
+```
+
+**For Maximum Throughput Testing:**
+```json
+{
+  "TargetTransactionsPerSecond": 50,
+  "MaxConcurrentUsers": 25,
+  "IntervalMs": 100  // Aggressive load testing
+}
+```
+
+**Key Considerations:**
+- **Response Time Impact**: Slower API responses reduce actual TPS below target
+- **Resource Limits**: Monitor test runner capacity for high concurrent loads
+- **Realistic Behavior**: Balance between user simulation and system stress testing
+
 ## 🎮 Usage
 
 ### Basic Load Test
