@@ -1,0 +1,7 @@
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.csproj.AssemblyReference.cache
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.GeneratedMSBuildEditorConfig.editorconfig
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.AssemblyInfoInputs.cache
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.AssemblyInfo.cs
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.csproj.CoreCompileInputs.cache
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.MvcApplicationPartsAssemblyInfo.cs
+/Users/alexk/dotnet/LoadRunner/src/MockBankingAPI/obj/Debug/net9.0/MockBankingAPI.MvcApplicationPartsAssemblyInfo.cache

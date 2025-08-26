@@ -1,0 +1,52 @@
+{
+  "mappings": [
+    {
+      "csvColumn": "BankId",
+      "postmanVariable": "{{BankId}}",
+      "dataType": "integer"
+    },
+    {
+      "csvColumn": "BranchId",
+      "postmanVariable": "{{BranchId}}",
+      "dataType": "integer"
+    },
+    {
+      "csvColumn": "AccountId",
+      "postmanVariable": "{{AccountId}}",
+      "dataType": "integer"
+    },
+    {
+      "csvColumn": "MinTransactionDate",
+      "postmanVariable": "{{MinTransactionDate}}",
+      "dataType": "string"
+    },
+    {
+      "csvColumn": "MaxTransactionDate",
+      "postmanVariable": "{{MaxTransactionDate}}",
+      "dataType": "string"
+    },
+    {
+      "csvColumn": "AccountType",
+      "postmanVariable": "{{AccountType}}",
+      "dataType": "integer"
+    }
+  ],
+  "globalVariables": [
+    {
+      "name": "url",
+      "value": "http://localhost:8080/kukukuku/qa/apiqa.kukukuku.co.il"
+    },
+    {
+      "name": "ClientId", 
+      "value": "test-client-id"
+    },
+    {
+      "name": "ClientSecret",
+      "value": "test-client-secret"
+    },
+    {
+      "name": "scope",
+      "value": "ILS_Currency"
+    }
+  ]
+}

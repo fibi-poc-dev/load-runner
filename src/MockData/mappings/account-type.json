@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/kukukuku/qa/apiqa.kukukuku.co.il/bfb-ils-transactions-booked/api/v1/accountType/.*",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .*"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "accountType": "{{randomValue values=['CHECKING', 'SAVINGS', 'BUSINESS']}}",
+      "accountId": "{{request.pathSegments.[6]}}",
+      "branchId": "{{request.pathSegments.[5]}}",
+      "accountStatus": "ACTIVE",
+      "currency": "ILS",
+      "balance": "{{randomDecimal min=0.0 max=50000.0}}"
+    },
+    "transformers": ["response-template"]
+  }
+}

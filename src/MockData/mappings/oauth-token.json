@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/token",
+    "bodyPatterns": [
+      {
+        "contains": "password"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "token_type": "Bearer",
+      "access_token": "AAIgZWMwYTRiOWRhOTRhMWY2NjBkMDBkMjAxYjEyYzRmMTbGbClrq50oFNPtKknDMbxQdjRdL7X1lOOnnga3Nf4GOhovq7VVtBBhtqRLtWjNtZ3woeI0tRGgIvkd9rtlO-Ortb8fj6dtGUMlsvWOku_7dWrpuC-ZPXRW0jKzjKPUhYTximhAmCFSj9oikMCdVQhOruDRZCEQHNiziii4iUG8afPR3lMWJSh4RufPyV3fhbwgus1FgWfPIaqNgujt-hn0NwZsbzzQL3iFPQFzifEWoB8i_-iVzr0bqtkC74jSuiW_sI4xFCN1YqhKemE-pMFCsJXYsAPZ76LI-C1-unzqwyOScvdHo_cpTS2-VkQTPVvipzyxuQhPu2y-Vub4v8wiJ0Tv_oawBzdUpiJDw-0YSPmoZmXHWEpfdIM3J9qudbHNRhLKMgJ-hfiaqsUpy6MQpelmTnuebZ_3joOr-_qbeg",
+      "scope": "ILS_Currency",
+      "expires_in": 3600,
+      "consented_on": 1756192959,
+      "refresh_token": "AALGbClrq50oFNPtKknDMbxQlgZ_PULMAYSS9mookWH_o96_noJ6rt2lQqNxnMlEGnwL9QQcUGa4L9-R0JUDoVWwjdFNTeXPAJIYnacQZx0HuwoCguLUTPofd5gdHDkpzbRJf99yDoqMg9WCUz5hfGBWAv0TEP8uUrdqeDOLR7pqk0gPX9DFIyIgJtZvla3XdRkBmK3eCfciESXX7lr_SapJE_Xq0ekaF8rAecZm66V1Jl10xxKrmlRQ9mBrF5WW94BSYgdK4Y4GGTxymnuyvAch34XSLOO1JoZA7I3j3sQVCZ1g_ocIbzfnlKewsvT2kRrFZFi5nc-S_q8lfoIFEEykjT6zdg_CgiP002anir1hqp6cbItc4QONaGSW5dVuaeBxCl7zPBe4Jx0tJWi7xzsno3rxTSNh4dNymuV9c9GXZpz49BnFbgoMT63QbjQNPBE",
+      "refresh_token_expires_in": 7200
+    },
+    "transformers": ["response-template"]
+  }
+}

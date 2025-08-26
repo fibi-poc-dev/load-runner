@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  wiremock:
+    image: wiremock/wiremock:3.3.1
+    container_name: banking-api-mock
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./MockData:/home/wiremock
+    command: --global-response-templating --verbose
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__admin/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - loadrunner-network
+
+networks:
+  loadrunner-network:
+    driver: bridge

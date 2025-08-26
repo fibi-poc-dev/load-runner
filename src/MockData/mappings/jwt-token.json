@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/sso-portal/token"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Set-Cookie": "confirmation={{randomValue type='UUID'}}; Path=/; HttpOnly"
+    },
+    "jsonBody": {
+      "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJQb3J0YWwiLCJzdWIiOiJBUEkgQ29ubmVjdCIsImF1ZCI6IkJGQi5Cb29rZWRUcmFuc2FjdGlvbnMiLCJleHAiOjE3NTYxOTI5NjksIm5iZiI6MTc1NjE5Mjk1NCwiaWF0IjoxNzU2MTkyOTU5LCJqdGkiOiI3ZmU3OGFhZS03YzlhLTQxNDItOTNjMS01MGE2MTc3Mzk2NjYiLCJiYW5rSWQiOjMxLCJicmFuY2hJZCI6MSwiYWNjb3VudElkIjoxMDA2MDksInVzZXJOYW1lIjoiSTI5MSIsImN1c3RvbWVySWQiOiIwMDEyOTE0NzUiLCJqd3RJc3N1ZXIiOiJQb3J0YWwifQ.MnDS7A4iOIR_GLHyls7XcWjb0wdlVC5Rf_oCDJrm3CI"
+    },
+    "transformers": ["response-template"]
+  }
+}

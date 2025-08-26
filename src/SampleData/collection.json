@@ -1,0 +1,485 @@
+{
+	"info": {
+		"_postman_id": "ae04533b-e45a-433f-b6ac-a8a69dabe358",
+		"name": "bfb-ils-transactions-booked_Q",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "jwt-server-si/token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var confirmation = JSON.parse(responseBody).jwt;\r",
+							"//console.log(confirmation);\r",
+							"pm.collectionVariables.set(\"confirmation\",confirmation);\r",
+							"//console.log(pm.environment.get(\"confirmation\"));\r",
+							"\r",
+							"//console.log(pm.request.body.raw);\r",
+							"\r",
+							"var userNameJson = JSON.parse(pm.request.body.raw);\r",
+							"var jsonUserNameString = JSON.stringify(userNameJson);\r",
+							"\r",
+							"//console.log(\"userNameJson=\" + jsonUserNameString);\r",
+							"\r",
+							"var base64UserName=btoa(jsonUserNameString);\r",
+							"//console.log(\"base64UserName=\" + base64UserName);\r",
+							"pm.collectionVariables.set(\"username\",base64UserName);\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"accept": true
+				}
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Id",
+						"value": "{{ClientId}}",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Secret",
+						"value": "{{ClientSecret}}",
+						"type": "text"
+					},
+					{
+						"key": "Secret-Key-Type",
+						"value": "F",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"iss\": \"Portal\",\r\n    \"sub\": \"API Connect\",\r\n    \"aud\": \"BFB.BookedTransactions\",\r\n    \"exp\": 10,\r\n    \"userName\": \"I291\",\r\n    \"customerId\": \"001291475\",\r\n    \"bankId\": 31,\r\n    \"branchId\": 1,\r\n    \"accountId\": 100609,\r\n    \"jwtIssuer\": \"Portal\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/jwt-server-si/token",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"jwt-server-si",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "token password auto",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var access_token = JSON.parse(responseBody).access_token;\r",
+							"console.log(\"Bearer \" + access_token);\r",
+							"pm.collectionVariables.set(\"access_token\",access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Cache-Control",
+						"value": "no-cache",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "grant_type",
+							"value": "password",
+							"type": "text"
+						},
+						{
+							"key": "client_id",
+							"value": "{{ClientId}}",
+							"type": "text"
+						},
+						{
+							"key": "client_secret",
+							"value": "{{ClientSecret}}",
+							"type": "text"
+						},
+						{
+							"key": "username",
+							"value": "{{username}}",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "{{confirmation}}",
+							"type": "text"
+						},
+						{
+							"key": "scope",
+							"value": "{{scope}}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{url}}/sso-portal/token",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"sso-portal",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "accountTransactions",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-IBM-Client-Id",
+						"value": "{{ClientId}}",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Secret",
+						"value": "{{ClientSecret}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "X-kukukuku-Transaction-Id",
+						"value": "1234",
+						"type": "default"
+					},
+					{
+						"key": "X-kukukuku-Metadata",
+						"value": "true",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/bfb-ils-transactions-booked/api/v1/accountTransactions/{{BranchId}}/{{AccountType}}/{{AccountId}}?startDate={{MinTransactionDate}}&endDate={{MaxTransactionDate}}&page=0&rowsInPage=200",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"bfb-ils-transactions-booked",
+						"api",
+						"v1",
+						"accountTransactions",
+						"{{BranchId}}",
+						"{{AccountType}}",
+						"{{AccountId}}"
+					],
+					"query": [
+						{
+							"key": "startDate",
+							"value": "{{MinTransactionDate}}"
+						},
+						{
+							"key": "endDate",
+							"value": "{{MaxTransactionDate}}"
+						},
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "rowsInPage",
+							"value": "200"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "accountType",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-IBM-Client-Id",
+						"value": "{{ClientId}}",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Secret",
+						"value": "{{ClientSecret}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "X-kukukuku-Transaction-Id",
+						"value": "1234",
+						"type": "default"
+					},
+					{
+						"key": "X-kukukuku-Metadata",
+						"value": "true",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/bfb-ils-transactions-booked/api/v1/accountType/1/100609",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"bfb-ils-transactions-booked",
+						"api",
+						"v1",
+						"accountType",
+						"1",
+						"100609"
+					],
+					"query": [
+						{
+							"key": "chequeType",
+							"value": "delayed",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "cleanRedis",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-IBM-Client-Id",
+						"value": "{{ClientId}}",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Secret",
+						"value": "{{ClientSecret}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "X-kukukuku-Transaction-Id",
+						"value": "1234",
+						"type": "default"
+					},
+					{
+						"key": "X-kukukuku-Metadata",
+						"value": "true",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/bfb-ils-transactions-booked/api/v1/cleanRedis",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"bfb-ils-transactions-booked",
+						"api",
+						"v1",
+						"cleanRedis"
+					],
+					"query": [
+						{
+							"key": "chequeType",
+							"value": "delayed",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "introspect",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Cache-Control",
+						"value": "no-cache",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Id",
+						"value": "{{ClientId}}",
+						"type": "text"
+					},
+					{
+						"key": "X-IBM-Client-Secret",
+						"value": "{{ClientSecret}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "text"
+						},
+						{
+							"key": "token_type_hint",
+							"value": "access_token",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{url}}/sso-portal/introspect",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"sso-portal",
+						"introspect"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "username",
+			"value": ""
+		},
+		{
+			"key": "confirmation",
+			"value": ""
+		},
+		{
+			"key": "ClientId",
+			"value": ""
+		},
+		{
+			"key": "ClientSecret",
+			"value": ""
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		},
+		{
+			"key": "scope",
+			"value": "ILS_Currency"
+		},
+		{
+			"key": "url",
+			"value": "http://localhost:8080",
+			"type": "default"
+		},
+		{
+			"key": "BankId",
+			"value": "31",
+			"type": "default"
+		},
+		{
+			"key": "BranchId",
+			"value": "39",
+			"type": "default"
+		},
+		{
+			"key": "AccountId",
+			"value": "1111",
+			"type": "default"
+		},
+		{
+			"key": "MinTransactionDate",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "MaxTransactionDate",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "AccountType",
+			"value": "",
+			"type": "default"
+		}
+	]
+}

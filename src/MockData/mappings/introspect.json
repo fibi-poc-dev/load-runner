@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/sso-portal/introspect",
+    "headers": {
+      "Authorization": {
+        "matches": "Bearer .*"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "active": true,
+      "client_id": "{{jsonPath request.body '$.client_id'}}",
+      "scope": "ILS_Currency",
+      "exp": "{{math request.headers.Authorization.[0] op='+' n=3600}}",
+      "iat": "{{now}}",
+      "token_type": "Bearer"
+    },
+    "transformers": ["response-template"]
+  }
+}

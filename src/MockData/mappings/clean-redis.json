@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "DELETE",
+    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/bfb-ils-transactions-booked/api/v1/cleanRedis"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "message": "Redis cache cleared successfully",
+      "timestamp": "{{now format='yyyy-MM-dd HH:mm:ss'}}",
+      "status": "success"
+    },
+    "transformers": ["response-template"]
+  }
+}
