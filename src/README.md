@@ -263,6 +263,67 @@ dotnet run -- --verbose
 
 # Specify custom collection path
 dotnet run -- --collection "../custom/collection.json"
+```
+
+## 📋 **Test Data Configuration**
+
+LoadRunner uses two types of variables for test data:
+
+### **1. CSV Data Variables** 
+Configure in `SampleData/column-mapping.json` to map CSV columns to Postman variables:
+
+```json
+{
+  "mappings": [
+    {
+      "csvColumn": "BankId",
+      "postmanVariable": "{{BankId}}",
+      "dataType": "integer"
+    },
+    {
+      "csvColumn": "AccountId", 
+      "postmanVariable": "{{AccountId}}",
+      "dataType": "integer"
+    }
+  ]
+}
+```
+
+### **2. Global Variables**
+✅ **Automatically extracted from your Postman Collection**
+- No configuration needed in `column-mapping.json`
+- Defined directly in `collection.json` variables section
+- Collection-specific - each collection brings its own variables
+
+**Example in collection.json:**
+```json
+{
+  "variable": [
+    {
+      "key": "url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ClientId", 
+      "value": "test-client-id"
+    },
+    {
+      "key": "ClientSecret",
+      "value": "test-client-secret" 
+    },
+    {
+      "key": "scope",
+      "value": "ILS_Currency"
+    }
+  ]
+}
+```
+
+**Why This Approach?**
+- 🎯 **Generic**: Works with any Postman collection
+- 🔄 **Dynamic**: Variables come from the collection itself
+- 🚀 **Simple**: No duplicate configuration needed
+- ✅ **Standard**: Follows Postman's native variable structure
 
 # Set custom duration (in seconds)
 dotnet run -- --duration 600

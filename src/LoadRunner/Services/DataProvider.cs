@@ -13,6 +13,7 @@ public interface IDataProvider
     ColumnMapping GetColumnMapping();
     Dictionary<string, string> MapRowToVariables(CsvDataRow dataRow);
     Dictionary<string, string> GetGlobalVariables();
+    Dictionary<string, string> GetPostmanCollectionVariables();
 }
 
 public class DataProvider : IDataProvider
@@ -151,15 +152,48 @@ public class DataProvider : IDataProvider
 
     public Dictionary<string, string> GetGlobalVariables()
     {
+        // First get variables from Postman collection
+        var collectionVars = GetPostmanCollectionVariables();
+        
+        // Then get any additional variables from column mapping (for backwards compatibility)
         var mapping = GetColumnMapping();
-        var variables = new Dictionary<string, string>();
+        var mappingVars = new Dictionary<string, string>();
 
         foreach (var globalVar in mapping.GlobalVariables)
         {
-            variables[globalVar.Name] = globalVar.Value;
+            mappingVars[globalVar.Name] = globalVar.Value;
         }
 
-        _logger.LogDebug("Retrieved {Count} global variables", variables.Count);
+        // Collection variables take precedence over mapping variables
+        foreach (var kvp in mappingVars)
+        {
+            if (!collectionVars.ContainsKey(kvp.Key))
+            {
+                collectionVars[kvp.Key] = kvp.Value;
+            }
+        }
+
+        _logger.LogDebug("Retrieved {Count} global variables ({CollectionCount} from collection, {MappingCount} from mapping)", 
+            collectionVars.Count, GetPostmanCollectionVariables().Count, mapping.GlobalVariables.Count);
+        
+        return collectionVars;
+    }
+
+    public Dictionary<string, string> GetPostmanCollectionVariables()
+    {
+        var collection = _configurationManager.LoadPostmanCollection();
+        var variables = new Dictionary<string, string>();
+
+        foreach (var variable in collection.Variables)
+        {
+            // Only include variables that have non-empty values
+            if (!string.IsNullOrWhiteSpace(variable.Value))
+            {
+                variables[variable.Key] = variable.Value;
+            }
+        }
+
+        _logger.LogDebug("Retrieved {Count} variables from Postman collection", variables.Count);
         return variables;
     }
 

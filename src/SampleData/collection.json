@@ -432,11 +432,11 @@
 		},
 		{
 			"key": "ClientId",
-			"value": ""
+			"value": "test-client-id"
 		},
 		{
 			"key": "ClientSecret",
-			"value": ""
+			"value": "test-client-secret"
 		},
 		{
 			"key": "access_token",

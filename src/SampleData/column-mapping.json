@@ -30,23 +30,5 @@
       "postmanVariable": "{{AccountType}}",
       "dataType": "integer"
     }
-  ],
-  "globalVariables": [
-    {
-      "name": "url",
-      "value": "http://localhost:8080/kukukuku/qa/apiqa.kukukuku.co.il"
-    },
-    {
-      "name": "ClientId", 
-      "value": "test-client-id"
-    },
-    {
-      "name": "ClientSecret",
-      "value": "test-client-secret"
-    },
-    {
-      "name": "scope",
-      "value": "ILS_Currency"
-    }
   ]
 }
