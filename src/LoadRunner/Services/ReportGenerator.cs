@@ -92,6 +92,12 @@ public class ReportGenerator : IReportGenerator
         html.AppendLine(GenerateChartsSection(results));
         html.AppendLine("        </div>");
         
+        // Per-API Breakdown
+        html.AppendLine("        <div class=\"section\">");
+        html.AppendLine("            <h2>Per-API Performance Breakdown</h2>");
+        html.AppendLine(GenerateApiBreakdown(results));
+        html.AppendLine("        </div>");
+        
         // Success Criteria Analysis
         html.AppendLine("        <div class=\"section\">");
         html.AppendLine("            <h2>Success Criteria Analysis</h2>");
@@ -215,6 +221,118 @@ public class ReportGenerator : IReportGenerator
             padding: 0.5rem;
             background: #f8f9fa;
             border-radius: 3px;
+        }
+        .api-breakdown-container {
+            margin: 1rem 0;
+        }
+        .api-summary-table {
+            margin-bottom: 2rem;
+        }
+        .api-summary-table h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .metrics-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem 0.75rem;
+        }
+        .metrics-table tbody td {
+            text-align: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .metrics-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .endpoint-name {
+            text-align: left !important;
+            font-weight: 600;
+            color: #495057;
+        }
+        .success {
+            color: #28a745;
+            font-weight: 600;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .api-details {
+            margin-top: 2rem;
+        }
+        .api-details h3 {
+            color: #495057;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+        }
+        .api-detail-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .api-detail-card h4 {
+            color: #495057;
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        .api-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            min-width: 150px;
+        }
+        .stat-item.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .stat-item.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+        }
+        .error-detail {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #ffffff;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #721c24;
         }
         ";
     }
@@ -494,5 +612,146 @@ public class ReportGenerator : IReportGenerator
         var tpsPass = metrics.CurrentTransactionsPerSecond >= config.Thresholds.MinTransactionsPerSecond;
         
         return responseTimePass && errorRatePass && tpsPass;
+    }
+
+    private string GenerateApiBreakdown(List<TestExecutionResult> results)
+    {
+        var html = new StringBuilder();
+
+        // Group results by API endpoint
+        var apiGroups = results.GroupBy(r => r.RequestName).ToList();
+
+        if (!apiGroups.Any())
+        {
+            html.AppendLine("            <p>No API data available.</p>");
+            return html.ToString();
+        }
+
+        html.AppendLine("            <div class=\"api-breakdown-container\">");
+        
+        // Summary table
+        html.AppendLine("                <div class=\"api-summary-table\">");
+        html.AppendLine("                    <h3>API Performance Summary</h3>");
+        html.AppendLine("                    <table class=\"metrics-table\">");
+        html.AppendLine("                        <thead>");
+        html.AppendLine("                            <tr>");
+        html.AppendLine("                                <th>API Endpoint</th>");
+        html.AppendLine("                                <th>Total Requests</th>");
+        html.AppendLine("                                <th>Success Rate</th>");
+        html.AppendLine("                                <th>Avg Response Time</th>");
+        html.AppendLine("                                <th>P50</th>");
+        html.AppendLine("                                <th>P95</th>");
+        html.AppendLine("                                <th>P99</th>");
+        html.AppendLine("                                <th>Min</th>");
+        html.AppendLine("                                <th>Max</th>");
+        html.AppendLine("                                <th>Validation Pass Rate</th>");
+        html.AppendLine("                            </tr>");
+        html.AppendLine("                        </thead>");
+        html.AppendLine("                        <tbody>");
+
+        foreach (var apiGroup in apiGroups.OrderBy(g => g.Key))
+        {
+            var apiResults = apiGroup.ToList();
+            var totalRequests = apiResults.Count;
+            var successfulRequests = apiResults.Count(r => r.IsSuccess);
+            var successRate = (double)successfulRequests / totalRequests * 100;
+            
+            var responseTimes = apiResults.Select(r => r.ResponseTime.TotalMilliseconds).ToList();
+            var avgResponseTime = responseTimes.Average();
+            var minResponseTime = responseTimes.Min();
+            var maxResponseTime = responseTimes.Max();
+            
+            // Calculate percentiles
+            var sortedTimes = responseTimes.OrderBy(x => x).ToList();
+            var p50 = GetPercentile(sortedTimes, 50);
+            var p95 = GetPercentile(sortedTimes, 95);
+            var p99 = GetPercentile(sortedTimes, 99);
+            
+            // Validation pass rate
+            var validationResults = apiResults.Where(r => r.ValidationResult != null);
+            var validationPassRate = validationResults.Any() 
+                ? (double)validationResults.Count(r => r.ValidationResult!.IsSuccess) / validationResults.Count() * 100
+                : 100.0;
+
+            var successRateClass = successRate >= 95 ? "success" : successRate >= 90 ? "warning" : "error";
+            var validationClass = validationPassRate >= 95 ? "success" : validationPassRate >= 90 ? "warning" : "error";
+
+            html.AppendLine("                            <tr>");
+            html.AppendLine($"                                <td class=\"endpoint-name\">{apiGroup.Key}</td>");
+            html.AppendLine($"                                <td>{totalRequests:N0}</td>");
+            html.AppendLine($"                                <td class=\"{successRateClass}\">{successRate:F1}%</td>");
+            html.AppendLine($"                                <td>{avgResponseTime:F1} ms</td>");
+            html.AppendLine($"                                <td>{p50:F1} ms</td>");
+            html.AppendLine($"                                <td>{p95:F1} ms</td>");
+            html.AppendLine($"                                <td>{p99:F1} ms</td>");
+            html.AppendLine($"                                <td>{minResponseTime:F1} ms</td>");
+            html.AppendLine($"                                <td>{maxResponseTime:F1} ms</td>");
+            html.AppendLine($"                                <td class=\"{validationClass}\">{validationPassRate:F1}%</td>");
+            html.AppendLine("                            </tr>");
+        }
+
+        html.AppendLine("                        </tbody>");
+        html.AppendLine("                    </table>");
+        html.AppendLine("                </div>");
+
+        // Individual API details
+        html.AppendLine("                <div class=\"api-details\">");
+        html.AppendLine("                    <h3>Detailed API Analysis</h3>");
+        
+        foreach (var apiGroup in apiGroups.OrderBy(g => g.Key))
+        {
+            var apiResults = apiGroup.ToList();
+            var errorResults = apiResults.Where(r => !r.IsSuccess).ToList();
+            var validationFailures = apiResults.Where(r => r.ValidationResult != null && !r.ValidationResult.IsSuccess).ToList();
+
+            html.AppendLine($"                    <div class=\"api-detail-card\">");
+            html.AppendLine($"                        <h4>{apiGroup.Key}</h4>");
+            html.AppendLine($"                        <div class=\"api-stats\">");
+            html.AppendLine($"                            <div class=\"stat-item\">");
+            html.AppendLine($"                                <span class=\"stat-label\">Total Requests:</span>");
+            html.AppendLine($"                                <span class=\"stat-value\">{apiResults.Count:N0}</span>");
+            html.AppendLine($"                            </div>");
+            
+            if (errorResults.Any())
+            {
+                html.AppendLine($"                            <div class=\"stat-item error\">");
+                html.AppendLine($"                                <span class=\"stat-label\">Errors:</span>");
+                html.AppendLine($"                                <span class=\"stat-value\">{errorResults.Count} ({(double)errorResults.Count / apiResults.Count * 100:F1}%)</span>");
+                html.AppendLine($"                            </div>");
+                
+                // Show error details
+                var errorGroups = errorResults.GroupBy(r => $"{r.StatusCode} - {r.ErrorMessage}").Take(5);
+                foreach (var errorGroup in errorGroups)
+                {
+                    html.AppendLine($"                                <div class=\"error-detail\">");
+                    html.AppendLine($"                                    {errorGroup.Key}: {errorGroup.Count()} occurrences");
+                    html.AppendLine($"                                </div>");
+                }
+            }
+            
+            if (validationFailures.Any())
+            {
+                html.AppendLine($"                            <div class=\"stat-item warning\">");
+                html.AppendLine($"                                <span class=\"stat-label\">Validation Failures:</span>");
+                html.AppendLine($"                                <span class=\"stat-value\">{validationFailures.Count} ({(double)validationFailures.Count / apiResults.Count * 100:F1}%)</span>");
+                html.AppendLine($"                            </div>");
+            }
+            
+            html.AppendLine($"                        </div>");
+            html.AppendLine($"                    </div>");
+        }
+        
+        html.AppendLine("                </div>");
+        html.AppendLine("            </div>");
+
+        return html.ToString();
+    }
+
+    private double GetPercentile(List<double> sortedValues, double percentile)
+    {
+        if (!sortedValues.Any()) return 0;
+        
+        var index = (int)Math.Ceiling(sortedValues.Count * percentile / 100) - 1;
+        return sortedValues[Math.Max(0, Math.Min(index, sortedValues.Count - 1))];
     }
 }

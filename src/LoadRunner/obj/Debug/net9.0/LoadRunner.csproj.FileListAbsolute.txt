@@ -46,3 +46,4 @@
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/obj/Debug/net9.0/LoadRunner.pdb
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/obj/Debug/net9.0/LoadRunner.genruntimeconfig.cache
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/obj/Debug/net9.0/ref/LoadRunner.dll
+/Users/alexk/dotnet/LoadRunner/src/LoadRunner/obj/Debug/net9.0/LoadRunner.sourcelink.json
