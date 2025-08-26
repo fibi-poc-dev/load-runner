@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "DELETE",
-    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/bfb-ils-transactions-booked/api/v1/cleanRedis"
+    "urlPath": "/bfb-ils-transactions-booked/api/v1/cleanRedis"
   },
   "response": {
     "status": 200,

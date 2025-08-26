@@ -1,0 +1,29 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/sso-portal/token",
+    "bodyPatterns": [
+      {
+        "or": [
+          {
+            "matches": ".*username=[^&]{0,20}(&.*|$)"
+          },
+          {
+            "matches": ".*password=[^&]{0,20}(&.*|$)"
+          }
+        ]
+      }
+    ]
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "invalid_request",
+      "error_description": "Username and password must be more than 20 characters long"
+    }
+  }
+}

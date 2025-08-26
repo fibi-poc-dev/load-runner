@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/sso-portal/introspect",
+    "urlPath": "/sso-portal/introspect",
     "headers": {
       "Authorization": {
         "matches": "Bearer .*"

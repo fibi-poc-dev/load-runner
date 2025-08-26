@@ -235,13 +235,50 @@ public class PostmanScriptProcessor : IPostmanScriptProcessor
 
     private void HandleSetCollectionVariable(string line, ScriptExecutionContext context)
     {
-        var match = Regex.Match(line, @"pm\.collectionVariables\.set\([""'](\w+)[""'],\s*(\w+)\)");
+        // Match pm.collectionVariables.set("varName", value)
+        var match = Regex.Match(line, @"pm\.collectionVariables\.set\([""'](\w+)[""'],\s*(.+)\)");
         if (!match.Success) return;
 
         var variableName = match.Groups[1].Value;
-        var sourceVar = match.Groups[2].Value;
+        var sourceExpression = match.Groups[2].Value.Trim();
 
-        if (context.TempVariables.TryGetValue(sourceVar, out var value))
+        string value = "";
+        
+        // Check if it's a simple variable reference
+        if (context.TempVariables.TryGetValue(sourceExpression, out var tempValue))
+        {
+            value = tempValue;
+        }
+        // Check if it's a string literal
+        else if (sourceExpression.StartsWith('"') && sourceExpression.EndsWith('"'))
+        {
+            value = sourceExpression.Trim('"');
+        }
+        // Check if it's a property access like JSON.parse(responseBody).jwt
+        else if (sourceExpression.Contains("JSON.parse(responseBody)."))
+        {
+            var propertyMatch = Regex.Match(sourceExpression, @"JSON\.parse\(responseBody\)\.(\w+)");
+            if (propertyMatch.Success && !string.IsNullOrEmpty(context.ResponseBody))
+            {
+                var propertyName = propertyMatch.Groups[1].Value;
+                try
+                {
+                    using var document = JsonDocument.Parse(context.ResponseBody);
+                    if (document.RootElement.TryGetProperty(propertyName, out var property))
+                    {
+                        value = property.ValueKind == JsonValueKind.String 
+                            ? property.GetString() ?? ""
+                            : property.GetRawText();
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse response body for collection variable {Variable}", variableName);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(value))
         {
             context.Variables[variableName] = value;
             _logger.LogDebug("Set collection variable {Variable} = {Value}", variableName, value);

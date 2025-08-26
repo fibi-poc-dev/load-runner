@@ -1,10 +1,14 @@
 {
+  "priority": 2,
   "request": {
     "method": "POST",
-    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/sso-portal/token",
+    "urlPath": "/sso-portal/token",
     "bodyPatterns": [
       {
-        "contains": "password"
+        "matches": ".*username=[^&]{21,}.*"
+      },
+      {
+        "matches": ".*password=[^&]{21,}.*"
       }
     ]
   },

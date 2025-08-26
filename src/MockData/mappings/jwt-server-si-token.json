@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/jwt-server-si/token"
+    "urlPath": "/jwt-server-si/token"
   },
   "response": {
     "status": 200,

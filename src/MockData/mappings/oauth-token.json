@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/kukukuku/qa/apiqa.kukukuku.co.il/token",
+    "urlPath": "/token",
     "bodyPatterns": [
       {
         "contains": "password"

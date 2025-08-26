@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "urlPathPattern": "/kukukuku/qa/apiqa.kukukuku.co.il/bfb-ils-transactions-booked/api/v1/accountTransactions/.*",
+    "urlPathPattern": "/bfb-ils-transactions-booked/api/v1/accountTransactions/.*",
     "headers": {
       "Authorization": {
         "matches": "Bearer .*"
