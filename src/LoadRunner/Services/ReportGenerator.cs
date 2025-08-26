@@ -1,5 +1,7 @@
 using LoadRunner.Models;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -42,6 +44,9 @@ public class ReportGenerator : IReportGenerator
             await File.WriteAllTextAsync(reportPath, html);
             
             _logger.LogInformation("HTML report generated successfully at: {ReportPath}", reportPath);
+            
+            // Open the report in the default browser
+            OpenReportInBrowser(reportPath);
         }
         catch (Exception ex)
         {
@@ -981,5 +986,54 @@ public class ReportGenerator : IReportGenerator
         
         var index = (int)Math.Ceiling(sortedValues.Count * percentile / 100) - 1;
         return sortedValues[Math.Max(0, Math.Min(index, sortedValues.Count - 1))];
+    }
+
+    private void OpenReportInBrowser(string reportPath)
+    {
+        try
+        {
+            var absolutePath = Path.GetFullPath(reportPath);
+            var fileUrl = $"file://{absolutePath.Replace('\\', '/')}";
+            
+            _logger.LogInformation("Opening HTML report in default browser: {FileUrl}", fileUrl);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Windows
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = fileUrl,
+                    UseShellExecute = true
+                });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // macOS
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "open",
+                    Arguments = fileUrl,
+                    UseShellExecute = true
+                });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                // Linux
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "xdg-open",
+                    Arguments = fileUrl,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                _logger.LogWarning("Unable to determine OS platform for opening browser. Report available at: {ReportPath}", absolutePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to open report in browser automatically. Report available at: {ReportPath}", reportPath);
+        }
     }
 }

@@ -71,7 +71,8 @@ dotnet run
 
 ### 4. View Results
 - **Console**: Real-time metrics during test execution
-- **HTML Report**: `./reports/load-test-results.html`
+- **HTML Report**: `./reports/load-test-results.html` (automatically opens in default browser)
+- **Interactive Charts**: 6 different visualization types with per-API breakdowns
 
 ## 🔧 Installation
 
@@ -340,6 +341,8 @@ Real-time monitoring includes:
 
 ### HTML Reports
 Comprehensive HTML reports with:
+
+**Automatic Browser Opening**: Reports automatically open in your default OS browser upon test completion (Windows, macOS, Linux supported).
 
 #### Executive Summary
 - Overall test status (PASS/FAIL)
