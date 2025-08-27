@@ -68,7 +68,6 @@ public class ReportGenerator : IReportGenerator
         html.AppendLine("    <style>");
         html.AppendLine(GetCssStyles());
         html.AppendLine("    </style>");
-        html.AppendLine("    <script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>");
         html.AppendLine("</head>");
         html.AppendLine("<body>");
         
@@ -89,12 +88,6 @@ public class ReportGenerator : IReportGenerator
         html.AppendLine("        <div class=\"section\">");
         html.AppendLine("            <h2>Performance Metrics</h2>");
         html.AppendLine(GeneratePerformanceMetrics(metrics));
-        html.AppendLine("        </div>");
-        
-        // Charts
-        html.AppendLine("        <div class=\"section\">");
-        html.AppendLine("            <h2>Performance Charts</h2>");
-        html.AppendLine(GenerateChartsSection(results));
         html.AppendLine("        </div>");
         
         // Per-API Breakdown
@@ -125,11 +118,6 @@ public class ReportGenerator : IReportGenerator
         html.AppendLine("        </div>");
         
         html.AppendLine("    </div>");
-        
-        // JavaScript for charts
-        html.AppendLine("    <script>");
-        html.AppendLine(GenerateChartScript(results));
-        html.AppendLine("    </script>");
         
         html.AppendLine("</body>");
         html.AppendLine("</html>");
@@ -219,12 +207,6 @@ public class ReportGenerator : IReportGenerator
             text-align: center;
             border-bottom: 1px solid #e9ecef;
             padding-bottom: 0.5rem;
-        }
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
         }
         table {
             width: 100%;
@@ -361,6 +343,57 @@ public class ReportGenerator : IReportGenerator
         ";
     }
 
+    private string GetPlotlyLibrary()
+    {
+        // Plotly.js - embedded for offline functionality
+        var plotlyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plotly.min.js");
+        
+        if (File.Exists(plotlyPath))
+        {
+            return File.ReadAllText(plotlyPath);
+        }
+        
+        // Fallback: return a minimal Plotly.js library loader inline
+        return GetPlotlyInline();
+    }
+
+    private string GetPlotlyInline()
+    {
+        // This is the Plotly.js library minified for offline use
+        // Due to size constraints, we'll load from embedded resource or use a smaller fallback
+        try
+        {
+            var plotlyPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "", "plotly.min.js");
+            if (File.Exists(plotlyPath))
+            {
+                return File.ReadAllText(plotlyPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to load Plotly.js from file, using CDN fallback");
+        }
+        
+        // If file loading fails, return a placeholder that will load from CDN as fallback
+        return @"
+            /* Plotly.js fallback loader */
+            (function() {
+                if (typeof Plotly === 'undefined') {
+                    var script = document.createElement('script');
+                    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+                    script.onload = function() {
+                        console.log('Plotly.js loaded from CDN as fallback');
+                    };
+                    script.onerror = function() {
+                        console.error('Failed to load Plotly.js from CDN');
+                        document.body.innerHTML += '<div style=""background: #ff6b6b; color: white; padding: 1rem; margin: 1rem; border-radius: 4px;"">Plotly.js library failed to load. Charts will not be displayed.</div>';
+                    };
+                    document.head.appendChild(script);
+                }
+            })();
+        ";
+    }
+
     private string GenerateExecutiveSummary(LoadTestMetrics metrics, LoadRunnerConfiguration config)
     {
         var html = new StringBuilder();
@@ -428,38 +461,6 @@ public class ReportGenerator : IReportGenerator
         html.AppendLine("</div>");
         
         return html.ToString();
-    }
-
-    private string GenerateChartsSection(List<TestExecutionResult> results)
-    {
-        return @"
-            <div class=""charts-grid"">
-                <div class=""chart-container"">
-                    <h3>Overall Response Time Timeline</h3>
-                    <canvas id=""responseTimeChart""></canvas>
-                </div>
-                <div class=""chart-container"">
-                    <h3>Overall Throughput</h3>
-                    <canvas id=""throughputChart""></canvas>
-                </div>
-                <div class=""chart-container"">
-                    <h3>Per-API Response Time Comparison</h3>
-                    <canvas id=""apiResponseTimeChart""></canvas>
-                </div>
-                <div class=""chart-container"">
-                    <h3>API Performance Spider Chart</h3>
-                    <canvas id=""spiderChart""></canvas>
-                </div>
-                <div class=""chart-container"">
-                    <h3>API Request Distribution</h3>
-                    <canvas id=""apiDistributionChart""></canvas>
-                </div>
-                <div class=""chart-container"">
-                    <h3>Success Rate by API</h3>
-                    <canvas id=""apiSuccessChart""></canvas>
-                </div>
-            </div>
-        ";
     }
 
     private string GenerateSuccessCriteriaAnalysis(List<TestExecutionResult> results)
@@ -543,8 +544,14 @@ public class ReportGenerator : IReportGenerator
 
     private string GenerateChartScript(List<TestExecutionResult> results)
     {
+        // Sample data for charts (max 100 points for better performance and readability)
+        var maxDataPoints = 100;
+        var sampledResults = results.Count > maxDataPoints 
+            ? results.Where((r, i) => i % (results.Count / maxDataPoints) == 0).ToList()
+            : results;
+            
         var responseTimeData = JsonSerializer.Serialize(
-            results.Select(r => new { x = r.Timestamp.ToString("HH:mm:ss"), y = r.ResponseTime.TotalMilliseconds }).ToList());
+            sampledResults.Select((r, index) => new { x = index, y = r.ResponseTime.TotalMilliseconds }).ToList());
 
         // Group results by API for per-API charts
         var apiGroups = results.GroupBy(r => r.RequestName).ToList();
@@ -601,54 +608,74 @@ public class ReportGenerator : IReportGenerator
         }).ToList();
 
         return $@"
-        // Response Time Chart
-        const ctx1 = document.getElementById('responseTimeChart').getContext('2d');
-        new Chart(ctx1, {{
-            type: 'line',
-            data: {{
-                datasets: [{{
-                    label: 'Response Time (ms)',
-                    data: {responseTimeData},
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{ display: false }}
-                }},
-                scales: {{
-                    x: {{
-                        type: 'category',
-                        title: {{
-                            display: true,
-                            text: 'Time'
-                        }}
-                    }},
-                    y: {{
-                        title: {{
-                            display: true,
-                            text: 'Response Time (ms)'
-                        }}
-                    }}
-                }}
+        document.addEventListener('DOMContentLoaded', function() {{
+            // Initialize all charts after DOM is ready
+            console.log('DOM loaded, checking Plotly.js availability...');
+            
+            if (typeof Plotly === 'undefined') {{
+                console.error('Plotly.js is not loaded! Charts will not be displayed.');
+                return;
             }}
-        }});
+            
+            console.log('Plotly.js is available, initializing charts...');
+            
+            // Check if all required DOM elements exist
+            const requiredElements = ['responseTimeChart', 'throughputChart', 'apiResponseTimeChart', 'spiderChart', 'apiDistributionChart', 'apiSuccessChart'];
+            const missingElements = requiredElements.filter(id => !document.getElementById(id));
+            
+            if (missingElements.length > 0) {{
+                console.error('Missing chart container elements:', missingElements);
+                return;
+            }}
+            
+            console.log('All chart containers found, creating charts...');
+            
+            // Response Time Chart
+            try {{
+                console.log('Creating Response Time Chart...');
+                const responseTimeChartData = [{{{responseTimeData}}}];
+                const plotData = [{{
+                    x: responseTimeChartData.map(d => d.x),
+                    y: responseTimeChartData.map(d => d.y),
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Response Time (ms)',
+                    line: {{ color: '#667eea', width: 2 }},
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(102, 126, 234, 0.1)'
+                }}];
+                
+                const layout = {{
+                    title: {{ text: '', font: {{ size: 16 }} }},
+                    xaxis: {{ title: 'Time (seconds)', showgrid: true }},
+                    yaxis: {{ title: 'Response Time (ms)', showgrid: true }},
+                    margin: {{ t: 40, r: 40, b: 60, l: 80 }},
+                    showlegend: false,
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)'
+                }};
+                
+                const config = {{ responsive: true, displayModeBar: false }};
+                
+                Plotly.newPlot('responseTimeChart', plotData, layout, config);
+            console.log('Response Time Chart created successfully!');
+            }} catch (error) {{
+                console.error('Failed to create Response Time Chart:', error);
+            }}
 
         // Throughput Chart
-        const ctx2 = document.getElementById('throughputChart').getContext('2d');
+        try {{
+            console.log('Creating Throughput Chart...');
         const throughputData = [];
         let currentMinute = '';
         let requestCount = 0;
+        let minuteIndex = 0;
         
         {JsonSerializer.Serialize(results.Select(r => r.Timestamp.ToString("HH:mm")).ToList())}.forEach(time => {{
             if (time !== currentMinute) {{
                 if (currentMinute !== '') {{
-                    throughputData.push({{ x: currentMinute, y: requestCount }});
+                    throughputData.push({{ x: minuteIndex, y: requestCount }});
+                    minuteIndex++;
                 }}
                 currentMinute = time;
                 requestCount = 1;
@@ -657,168 +684,164 @@ public class ReportGenerator : IReportGenerator
             }}
         }});
         if (currentMinute !== '') {{
-            throughputData.push({{ x: currentMinute, y: requestCount }});
+            throughputData.push({{ x: minuteIndex, y: requestCount }});
         }}
         
-        new Chart(ctx2, {{
+        const plotData = [{{
+            x: throughputData.map(d => d.x),
+            y: throughputData.map(d => d.y),
             type: 'bar',
-            data: {{
-                datasets: [{{
-                    label: 'Requests per Minute',
-                    data: throughputData,
-                    backgroundColor: '#28a745',
-                    borderRadius: 4
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{ display: false }}
-                }},
-                scales: {{
-                    x: {{
-                        title: {{
-                            display: true,
-                            text: 'Time'
-                        }}
-                    }},
-                    y: {{
-                        title: {{
-                            display: true,
-                            text: 'Requests per Minute'
-                        }}
-                    }}
-                }}
-            }}
-        }});
+            name: 'Requests per Minute',
+            marker: {{ color: '#28a745' }}
+        }}];
+        
+        const layout = {{
+            title: {{ text: '', font: {{ size: 16 }} }},
+            xaxis: {{ title: 'Time (minutes)', showgrid: true }},
+            yaxis: {{ title: 'Requests per Minute', showgrid: true }},
+            margin: {{ t: 40, r: 40, b: 60, l: 80 }},
+            showlegend: false,
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        }};
+        
+        const config = {{ responsive: true, displayModeBar: false }};
+        
+        Plotly.newPlot('throughputChart', plotData, layout, config);
+            console.log('Throughput Chart created successfully!');
+        }} catch (error) {{
+            console.error('Failed to create Throughput Chart:', error);
+        }}
 
         // API Response Time Comparison Chart
-        const ctx3 = document.getElementById('apiResponseTimeChart').getContext('2d');
-        new Chart(ctx3, {{
+        try {{
+            console.log('Creating API Response Time Chart...');
+        const plotData = [{{
+            x: {JsonSerializer.Serialize(apiNames)},
+            y: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.data[0]).ToList())},
             type: 'bar',
-            data: {{
-                labels: {JsonSerializer.Serialize(apiNames)},
-                datasets: [{{
-                    label: 'Average Response Time (ms)',
-                    data: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.data[0]).ToList())},
-                    backgroundColor: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.backgroundColor).ToList())},
-                    borderRadius: 4
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{ display: false }}
-                }},
-                scales: {{
-                    x: {{
-                        title: {{
-                            display: true,
-                            text: 'API Endpoint'
-                        }}
-                    }},
-                    y: {{
-                        title: {{
-                            display: true,
-                            text: 'Average Response Time (ms)'
-                        }}
-                    }}
-                }}
-            }}
-        }});
+            name: 'Average Response Time (ms)',
+            marker: {{ color: {JsonSerializer.Serialize(apiResponseTimeData.Select(d => d.backgroundColor).ToList())} }}
+        }}];
+        
+        const layout = {{
+            title: {{ text: '', font: {{ size: 16 }} }},
+            xaxis: {{ title: 'API Endpoint', showgrid: true }},
+            yaxis: {{ title: 'Average Response Time (ms)', showgrid: true }},
+            margin: {{ t: 40, r: 40, b: 100, l: 80 }},
+            showlegend: false,
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        }};
+        
+        const config = {{ responsive: true, displayModeBar: false }};
+        
+        Plotly.newPlot('apiResponseTimeChart', plotData, layout, config);
+            console.log('API Response Time Chart created successfully!');
+        }} catch (error) {{
+            console.error('Failed to create API Response Time Chart:', error);
+        }}
 
-        // Spider Chart
-        const ctx4 = document.getElementById('spiderChart').getContext('2d');
-        new Chart(ctx4, {{
-            type: 'radar',
-            data: {{
-                labels: ['Response Time Score', 'Success Rate (%)', 'Validation Rate (%)', 'Traffic Share (%)'],
-                datasets: {JsonSerializer.Serialize(spiderData)}
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    title: {{
-                        display: true,
-                        text: 'API Performance Overview'
-                    }}
-                }},
-                scales: {{
-                    r: {{
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {{
-                            stepSize: 20
-                        }}
-                    }}
+        // Spider Chart (Radar Chart)
+        try {{
+            console.log('Creating Spider Chart...');
+        const spiderDatasets = {JsonSerializer.Serialize(spiderData)};
+        const plotData = spiderDatasets.map(dataset => ({{
+            type: 'scatterpolar',
+            r: dataset.data.concat([dataset.data[0]]), // Close the shape
+            theta: ['Response Time Score', 'Success Rate (%)', 'Validation Rate (%)', 'Traffic Share (%)', 'Response Time Score'],
+            fill: 'toself',
+            name: dataset.label,
+            line: {{ color: dataset.borderColor }},
+            fillcolor: dataset.backgroundColor
+        }}));
+        
+        const layout = {{
+            title: 'API Performance Overview',
+            polar: {{
+                radialaxis: {{
+                    visible: true,
+                    range: [0, 100],
+                    tickmode: 'linear',
+                    tick0: 0,
+                    dtick: 20
                 }}
-            }}
-        }});
+            }},
+            margin: {{ t: 80, r: 40, b: 40, l: 40 }},
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        }};
+        
+        const config = {{ responsive: true, displayModeBar: false }};
+        
+        Plotly.newPlot('spiderChart', plotData, layout, config);
+            console.log('Spider Chart created successfully!');
+        }} catch (error) {{
+            console.error('Failed to create Spider Chart:', error);
+        }}
 
         // API Distribution Pie Chart
-        const ctx5 = document.getElementById('apiDistributionChart').getContext('2d');
-        new Chart(ctx5, {{
-            type: 'doughnut',
-            data: {{
-                labels: {JsonSerializer.Serialize(apiNames)},
-                datasets: [{{
-                    data: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.data).ToList())},
-                    backgroundColor: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.backgroundColor).ToList())},
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{
-                        position: 'bottom'
-                    }}
-                }}
+        try {{
+            console.log('Creating API Distribution Chart...');
+        const plotData = [{{
+            values: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.data).ToList())},
+            labels: {JsonSerializer.Serialize(apiNames)},
+            type: 'pie',
+            hole: 0.4, // Makes it a doughnut chart
+            marker: {{
+                colors: {JsonSerializer.Serialize(apiDistributionData.Select(d => d.backgroundColor).ToList())},
+                line: {{ color: '#fff', width: 2 }}
             }}
-        }});
+        }}];
+        
+        const layout = {{
+            title: {{ text: '', font: {{ size: 16 }} }},
+            margin: {{ t: 40, r: 40, b: 40, l: 40 }},
+            showlegend: true,
+            legend: {{ orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' }},
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        }};
+        
+        const config = {{ responsive: true, displayModeBar: false }};
+        
+        Plotly.newPlot('apiDistributionChart', plotData, layout, config);
+            console.log('API Distribution Chart created successfully!');
+        }} catch (error) {{
+            console.error('Failed to create API Distribution Chart:', error);
+        }}
 
         // API Success Rate Chart
-        const ctx6 = document.getElementById('apiSuccessChart').getContext('2d');
-        new Chart(ctx6, {{
+        try {{
+            console.log('Creating API Success Rate Chart...');
+        const plotData = [{{
+            x: {JsonSerializer.Serialize(apiNames)},
+            y: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.data[0]).ToList())},
             type: 'bar',
-            data: {{
-                labels: {JsonSerializer.Serialize(apiNames)},
-                datasets: [{{
-                    label: 'Success Rate (%)',
-                    data: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.data[0]).ToList())},
-                    backgroundColor: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.backgroundColor).ToList())},
-                    borderRadius: 4
-                }}]
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{
-                    legend: {{ display: false }}
-                }},
-                scales: {{
-                    x: {{
-                        title: {{
-                            display: true,
-                            text: 'API Endpoint'
-                        }}
-                    }},
-                    y: {{
-                        beginAtZero: true,
-                        max: 100,
-                        title: {{
-                            display: true,
-                            text: 'Success Rate (%)'
-                        }}
-                    }}
-                }}
-            }}
-        }});
+            name: 'Success Rate (%)',
+            marker: {{ color: {JsonSerializer.Serialize(apiSuccessData.Select(d => d.backgroundColor).ToList())} }}
+        }}];
+        
+        const layout = {{
+            title: {{ text: '', font: {{ size: 16 }} }},
+            xaxis: {{ title: 'API Endpoint', showgrid: true }},
+            yaxis: {{ title: 'Success Rate (%)', showgrid: true, range: [0, 100] }},
+            margin: {{ t: 40, r: 40, b: 100, l: 80 }},
+            showlegend: false,
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)'
+        }};
+        
+        const config = {{ responsive: true, displayModeBar: false }};
+        
+        Plotly.newPlot('apiSuccessChart', plotData, layout, config);
+            console.log('API Success Rate Chart created successfully!');
+        }} catch (error) {{
+            console.error('Failed to create API Success Rate Chart:', error);
+        }}
+        
+        console.log('All charts initialized successfully!');
+        }}); // End DOMContentLoaded event listener
         ";
     }
 

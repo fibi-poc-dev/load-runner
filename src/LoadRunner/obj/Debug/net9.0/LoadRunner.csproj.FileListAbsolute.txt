@@ -1,4 +1,5 @@
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/bin/Debug/net9.0/LoadRunner
+/Users/alexk/dotnet/LoadRunner/src/LoadRunner/bin/Debug/net9.0/chart.min.js
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/bin/Debug/net9.0/LoadRunner.deps.json
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/bin/Debug/net9.0/LoadRunner.runtimeconfig.json
 /Users/alexk/dotnet/LoadRunner/src/LoadRunner/bin/Debug/net9.0/LoadRunner.dll

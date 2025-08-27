@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        canvas { border: 1px solid #ccc; max-width: 800px; max-height: 400px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Chart.js Debug Test</h1>
+    <div id="debug-output" class="debug">Starting debug...</div>
+    <canvas id="testChart" width="800" height="400"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const debugDiv = document.getElementById('debug-output');
+        function debug(msg) {
+            console.log(msg);
+            debugDiv.innerHTML += '<br>' + msg;
+        }
+
+        debug('Script loaded');
+        
+        window.addEventListener('load', function() {
+            debug('Window loaded');
+            debug('Chart available: ' + (typeof Chart !== 'undefined'));
+            
+            if (typeof Chart === 'undefined') {
+                debug('ERROR: Chart.js not loaded!');
+                return;
+            }
+            
+            debug('Chart.js version: ' + (Chart.version || 'unknown'));
+            
+            const canvas = document.getElementById('testChart');
+            debug('Canvas found: ' + (canvas !== null));
+            
+            if (!canvas) {
+                debug('ERROR: Canvas not found!');
+                return;
+            }
+            
+            try {
+                const ctx = canvas.getContext('2d');
+                debug('Context created: ' + (ctx !== null));
+                
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Test Data',
+                            data: [{x: 0, y: 10}, {x: 1, y: 20}, {x: 2, y: 15}],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        scales: {
+                            x: { type: 'linear' },
+                            y: {}
+                        }
+                    }
+                });
+                
+                debug('SUCCESS: Chart created!');
+                
+            } catch (error) {
+                debug('ERROR: ' + error.message);
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

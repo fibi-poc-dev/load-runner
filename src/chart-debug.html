@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoadRunner Chart Debug</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .chart-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 10px 0;
+        }
+        h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        #debug-info {
+            background: #e3f2fd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <h1>LoadRunner Chart Debug</h1>
+    <div id="debug-info">Debug info will appear here...</div>
+    
+    <div class="chart-section">
+        <h3>Response Time Chart</h3>
+        <div class="chart-container">
+            <canvas id="responseTimeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart.js v4.4.0 inline -->
+    <script>
+        // Simplified Chart.js - using CDN for testing
+        console.log('Loading Chart.js from CDN...');
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        function debugLog(message) {
+            console.log(message);
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.innerHTML += '<div>' + message + '</div>';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('DOM loaded, checking Chart.js...');
+            
+            if (typeof Chart === 'undefined') {
+                debugLog('ERROR: Chart.js is not available!');
+                return;
+            }
+            
+            debugLog('Chart.js is available! Version: ' + (Chart.version || 'unknown'));
+            
+            // Check if canvas exists
+            const canvas = document.getElementById('responseTimeChart');
+            if (!canvas) {
+                debugLog('ERROR: Canvas element not found!');
+                return;
+            }
+            
+            debugLog('Canvas element found, creating chart...');
+            
+            try {
+                const ctx = canvas.getContext('2d');
+                
+                // Simple test data (just 10 points instead of 755)
+                const testData = [];
+                for (let i = 0; i < 10; i++) {
+                    testData.push({
+                        x: i,
+                        y: Math.random() * 20 + 1
+                    });
+                }
+                
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Response Time (ms)',
+                            data: testData,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Response Time (ms)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                debugLog('SUCCESS: Chart created successfully!');
+                debugLog('Chart instance: ' + (chart ? 'Created' : 'Failed'));
+                
+            } catch (error) {
+                debugLog('ERROR creating chart: ' + error.message);
+                console.error('Full error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
