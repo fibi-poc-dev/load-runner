@@ -102,39 +102,49 @@ public class PostmanScriptProcessor : IPostmanScriptProcessor
         if (string.IsNullOrWhiteSpace(line) || line.Trim().StartsWith("//")) 
             return;
 
-        var cleanLine = line.Trim().TrimEnd(';');
+        var cleanLine = line.Trim().TrimEnd('\r', '\n', ';', ' ');
 
         try
         {
             // Handle JSON.parse(responseBody).property
             if (cleanLine.Contains("JSON.parse(responseBody)"))
             {
+                _logger.LogDebug("Processing JSON.parse(responseBody) line: {Line}", cleanLine);
                 HandleJsonParseResponseBody(cleanLine, context);
             }
             // Handle JSON.parse(pm.request.body.raw)
             else if (cleanLine.Contains("JSON.parse(pm.request.body.raw)"))
             {
+                _logger.LogDebug("Processing JSON.parse(pm.request.body.raw) line: {Line}", cleanLine);
                 HandleJsonParseRequestBody(cleanLine, context);
             }
             // Handle JSON.stringify()
             else if (cleanLine.Contains("JSON.stringify"))
             {
+                _logger.LogDebug("Processing JSON.stringify line: {Line}", cleanLine);
                 HandleJsonStringify(cleanLine, context);
             }
             // Handle btoa() - Base64 encoding
             else if (cleanLine.Contains("btoa("))
             {
+                _logger.LogDebug("Processing btoa line: {Line}", cleanLine);
                 HandleBase64Encode(cleanLine, context);
             }
             // Handle pm.collectionVariables.set()
             else if (cleanLine.Contains("pm.collectionVariables.set"))
             {
+                _logger.LogDebug("Processing pm.collectionVariables.set line: {Line}", cleanLine);
                 HandleSetCollectionVariable(cleanLine, context);
             }
             // Handle variable assignments
             else if (cleanLine.Contains("var ") && cleanLine.Contains("="))
             {
+                _logger.LogDebug("Processing variable assignment line: {Line}", cleanLine);
                 HandleVariableAssignment(cleanLine, context);
+            }
+            else
+            {
+                _logger.LogDebug("Skipping unrecognized script line: {Line}", cleanLine);
             }
 
             _logger.LogDebug("Executed script line: {Line}", cleanLine);
@@ -235,7 +245,7 @@ public class PostmanScriptProcessor : IPostmanScriptProcessor
 
     private void HandleSetCollectionVariable(string line, ScriptExecutionContext context)
     {
-        // Match pm.collectionVariables.set("varName", value)
+        // Match pm.collectionVariables.set("varName", value) or pm.collectionVariables.set('varName', value)
         var match = Regex.Match(line, @"pm\.collectionVariables\.set\([""'](\w+)[""'],\s*(.+)\)");
         if (!match.Success) return;
 
@@ -244,15 +254,18 @@ public class PostmanScriptProcessor : IPostmanScriptProcessor
 
         string value = "";
         
-        // Check if it's a simple variable reference
-        if (context.TempVariables.TryGetValue(sourceExpression, out var tempValue))
+        // Check if it's a simple variable reference (no quotes)
+        if (!sourceExpression.StartsWith('"') && !sourceExpression.StartsWith("'") && 
+            !sourceExpression.Contains("JSON.parse") && context.TempVariables.TryGetValue(sourceExpression, out var tempValue))
         {
             value = tempValue;
+            _logger.LogDebug("Found temp variable {Source} = {Value}", sourceExpression, tempValue);
         }
         // Check if it's a string literal
-        else if (sourceExpression.StartsWith('"') && sourceExpression.EndsWith('"'))
+        else if ((sourceExpression.StartsWith('"') && sourceExpression.EndsWith('"')) ||
+                 (sourceExpression.StartsWith("'") && sourceExpression.EndsWith("'")))
         {
-            value = sourceExpression.Trim('"');
+            value = sourceExpression.Trim('"', '\'');
         }
         // Check if it's a property access like JSON.parse(responseBody).jwt
         else if (sourceExpression.Contains("JSON.parse(responseBody)."))
@@ -281,7 +294,13 @@ public class PostmanScriptProcessor : IPostmanScriptProcessor
         if (!string.IsNullOrEmpty(value))
         {
             context.Variables[variableName] = value;
-            _logger.LogDebug("Set collection variable {Variable} = {Value}", variableName, value);
+            _logger.LogDebug("Set collection variable {Variable} = {Value} (length: {Length})", 
+                variableName, value.Length > 50 ? value[..50] + "..." : value, value.Length);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to resolve value for collection variable {Variable} from expression: {Expression}. Available temp variables: {TempVars}", 
+                variableName, sourceExpression, string.Join(", ", context.TempVariables.Keys));
         }
     }
 

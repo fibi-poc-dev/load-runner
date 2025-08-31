@@ -16,6 +16,7 @@ public class HttpClientManager : IHttpClientManager
     private readonly IHttpRequestBuilder _requestBuilder;
     private readonly ISuccessCriteriaValidator _validator;
     private readonly IConfigurationManager _configurationManager;
+    private readonly IFailedRequestLogger _failedRequestLogger;
     private readonly ILogger<HttpClientManager> _logger;
 
     public HttpClientManager(
@@ -23,12 +24,14 @@ public class HttpClientManager : IHttpClientManager
         IHttpRequestBuilder requestBuilder,
         ISuccessCriteriaValidator validator,
         IConfigurationManager configurationManager,
+        IFailedRequestLogger failedRequestLogger,
         ILogger<HttpClientManager> logger)
     {
         _httpClient = httpClient;
         _requestBuilder = requestBuilder;
         _validator = validator;
         _configurationManager = configurationManager;
+        _failedRequestLogger = failedRequestLogger;
         _logger = logger;
 
         // Configure HttpClient
@@ -58,6 +61,9 @@ public class HttpClientManager : IHttpClientManager
             Url = request.RequestUri?.ToString() ?? "Unknown",
             Timestamp = DateTime.UtcNow
         };
+
+        // Clone the request for potential logging (we need to preserve the original)
+        var requestClone = await CloneHttpRequestAsync(request);
 
         // Copy request headers for logging
         foreach (var header in request.Headers)
@@ -129,6 +135,9 @@ public class HttpClientManager : IHttpClientManager
                 _logger.LogWarning("Request failed validation: {Method} {Url} - {StatusCode} in {ResponseTime}ms. Reasons: {Reasons}",
                     result.Method, result.Url, result.StatusCode, result.ResponseTime.TotalMilliseconds, 
                     string.Join("; ", result.ValidationResult?.FailureReasons ?? new List<string>()));
+
+                // Log failed request to file
+                await _failedRequestLogger.LogFailedRequestAsync(result, requestClone);
             }
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
@@ -141,6 +150,9 @@ public class HttpClientManager : IHttpClientManager
             
             _logger.LogWarning("Request timeout: {Method} {Url} after {ResponseTime}ms", 
                 result.Method, result.Url, result.ResponseTime.TotalMilliseconds);
+
+            // Log failed request to file
+            await _failedRequestLogger.LogFailedRequestAsync(result, requestClone);
         }
         catch (HttpRequestException ex)
         {
@@ -151,6 +163,9 @@ public class HttpClientManager : IHttpClientManager
             result.StatusCode = 0; // Network error
             
             _logger.LogError(ex, "HTTP request error: {Method} {Url}", result.Method, result.Url);
+
+            // Log failed request to file
+            await _failedRequestLogger.LogFailedRequestAsync(result, requestClone);
         }
         catch (Exception ex)
         {
@@ -161,12 +176,47 @@ public class HttpClientManager : IHttpClientManager
             result.StatusCode = 0;
             
             _logger.LogError(ex, "Unexpected error during request execution: {Method} {Url}", result.Method, result.Url);
+
+            // Log failed request to file
+            await _failedRequestLogger.LogFailedRequestAsync(result, requestClone);
         }
         finally
         {
             response?.Dispose();
+            requestClone?.Dispose();
         }
 
         return result;
+    }
+
+    private async Task<HttpRequestMessage> CloneHttpRequestAsync(HttpRequestMessage original)
+    {
+        var clone = new HttpRequestMessage(original.Method, original.RequestUri);
+
+        // Copy headers
+        foreach (var header in original.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        // Copy content and its headers if present
+        if (original.Content != null)
+        {
+            var contentBytes = await original.Content.ReadAsByteArrayAsync();
+            clone.Content = new ByteArrayContent(contentBytes);
+
+            foreach (var header in original.Content.Headers)
+            {
+                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        // Copy properties
+        foreach (var prop in original.Options)
+        {
+            clone.Options.TryAdd(prop.Key, prop.Value);
+        }
+
+        return clone;
     }
 }

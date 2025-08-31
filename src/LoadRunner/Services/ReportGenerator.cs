@@ -15,11 +15,16 @@ public interface IReportGenerator
 public class ReportGenerator : IReportGenerator
 {
     private readonly IConfigurationManager _configurationManager;
+    private readonly IFailedRequestLogger _failedRequestLogger;
     private readonly ILogger<ReportGenerator> _logger;
 
-    public ReportGenerator(IConfigurationManager configurationManager, ILogger<ReportGenerator> logger)
+    public ReportGenerator(
+        IConfigurationManager configurationManager, 
+        IFailedRequestLogger failedRequestLogger,
+        ILogger<ReportGenerator> logger)
     {
         _configurationManager = configurationManager;
+        _failedRequestLogger = failedRequestLogger;
         _logger = logger;
     }
 
@@ -40,6 +45,9 @@ public class ReportGenerator : IReportGenerator
             {
                 Directory.CreateDirectory(directory);
             }
+
+            // Initialize FailedRequestLogger with the report directory
+            _failedRequestLogger.SetReportDirectory(directory!);
 
             await File.WriteAllTextAsync(reportPath, html);
             
@@ -339,6 +347,21 @@ public class ReportGenerator : IReportGenerator
             border-radius: 4px;
             font-size: 0.875rem;
             color: #721c24;
+        }
+        .failed-endpoint-link {
+            color: #dc3545;
+            text-decoration: none;
+            font-weight: 600;
+            position: relative;
+        }
+        .failed-endpoint-link:hover {
+            text-decoration: underline;
+            color: #c82333;
+        }
+        .failed-endpoint-link::after {
+            content: ' ⚠️';
+            font-size: 0.8em;
+            margin-left: 4px;
         }
         ";
     }
@@ -932,8 +955,15 @@ public class ReportGenerator : IReportGenerator
             var successRateClass = successRate >= 95 ? "success" : successRate >= 90 ? "warning" : "error";
             var validationClass = validationPassRate >= 95 ? "success" : validationPassRate >= 90 ? "warning" : "error";
 
+            // Check if this endpoint has failed requests
+            var endpointName = apiGroup.Key;
+            var hasFailedRequests = _failedRequestLogger.HasFailedRequestsForEndpoint(endpointName);
+            var endpointCell = hasFailedRequests 
+                ? $"<a href=\"{Path.GetFileName(_failedRequestLogger.GetLogFilePathForEndpoint(endpointName))}\" class=\"failed-endpoint-link\" title=\"View failed requests log\">{endpointName}</a>"
+                : endpointName;
+
             html.AppendLine("                            <tr>");
-            html.AppendLine($"                                <td class=\"endpoint-name\">{apiGroup.Key}</td>");
+            html.AppendLine($"                                <td class=\"endpoint-name\">{endpointCell}</td>");
             html.AppendLine($"                                <td>{totalRequests:N0}</td>");
             html.AppendLine($"                                <td class=\"{successRateClass}\">{successRate:F1}%</td>");
             html.AppendLine($"                                <td>{avgResponseTime:F1} ms</td>");

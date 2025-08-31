@@ -18,6 +18,7 @@ public class LoadTestEngine : ILoadTestEngine
     private readonly IMetricsCollector _metricsCollector;
     private readonly IConsoleMonitor _consoleMonitor;
     private readonly IReportGenerator _reportGenerator;
+    private readonly IFailedRequestLogger _failedRequestLogger;
     private readonly ILogger<LoadTestEngine> _logger;
 
     private PostmanCollection? _postmanCollection;
@@ -31,6 +32,7 @@ public class LoadTestEngine : ILoadTestEngine
         IMetricsCollector metricsCollector,
         IConsoleMonitor consoleMonitor,
         IReportGenerator reportGenerator,
+        IFailedRequestLogger failedRequestLogger,
         ILogger<LoadTestEngine> logger)
     {
         _configurationManager = configurationManager;
@@ -39,6 +41,7 @@ public class LoadTestEngine : ILoadTestEngine
         _metricsCollector = metricsCollector;
         _consoleMonitor = consoleMonitor;
         _reportGenerator = reportGenerator;
+        _failedRequestLogger = failedRequestLogger;
         _logger = logger;
     }
 
@@ -48,6 +51,10 @@ public class LoadTestEngine : ILoadTestEngine
         {
             // Initialize test components
             await InitializeTestAsync();
+
+            // Set up report directory for failed request logging
+            var reportsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "reports");
+            _failedRequestLogger.SetReportDirectory(reportsDirectory);
 
             var config = _configurationManager.Configuration;
             var testDuration = TimeSpan.FromMilliseconds(config.ExecutionSettings.TestDurationMs);

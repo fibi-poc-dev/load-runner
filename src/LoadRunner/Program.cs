@@ -150,6 +150,7 @@ class Program
                 services.AddSingleton<ISuccessCriteriaValidator, SuccessCriteriaValidator>();
                 services.AddSingleton<IHttpRequestBuilder, HttpRequestBuilder>();
                 services.AddSingleton<IHttpClientManager, HttpClientManager>();
+                services.AddSingleton<IFailedRequestLogger, FailedRequestLogger>();
                 services.AddSingleton<IPostmanScriptProcessor, PostmanScriptProcessor>();
                 services.AddSingleton<IRequestSequenceManager, RequestSequenceManager>();
                 services.AddSingleton<IMetricsCollector, MetricsCollector>();

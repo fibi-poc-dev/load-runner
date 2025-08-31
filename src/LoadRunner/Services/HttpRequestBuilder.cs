@@ -208,6 +208,10 @@ public class HttpRequestBuilder : IHttpRequestBuilder
             var key = ReplaceVariables(param.Key, variables);
             var value = ReplaceVariables(param.Value, variables);
             formData.Add(new KeyValuePair<string, string>(key, value));
+            
+            // Log parameter details, truncating long values for readability
+            var logValue = value?.Length > 50 ? $"{value.Substring(0, 47)}..." : value;
+            _logger.LogDebug("URL-encoded parameter: {Key} = {Value} (length: {Length})", key, logValue, value?.Length ?? 0);
         }
 
         request.Content = new FormUrlEncodedContent(formData);
