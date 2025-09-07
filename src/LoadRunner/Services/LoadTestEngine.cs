@@ -247,23 +247,27 @@ public class LoadTestEngine : ILoadTestEngine
         }
 
         var random = new Random();
-        var dataRowIndex = random.Next(_testData!.Count);
-        var dataRow = _testData[dataRowIndex];
-        var userVariables = _dataProvider.MapRowToVariables(dataRow);
-        
-        // Merge global and user variables
-        var allVariables = new Dictionary<string, string>(_globalVariables!);
-        foreach (var kvp in userVariables)
-        {
-            allVariables[kvp.Key] = kvp.Value;
-        }
-
-        _logger.LogDebug("Virtual user started with data row {Index}", dataRowIndex);
+        _logger.LogDebug("Virtual user started - will use random row for each iteration");
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                // Select a NEW random row for each iteration
+                var dataRowIndex = random.Next(_testData!.Count);
+                var dataRow = _testData[dataRowIndex];
+                var userVariables = _dataProvider.MapRowToVariables(dataRow);
+                
+                // Merge global and user variables for this iteration
+                var allVariables = new Dictionary<string, string>(_globalVariables!);
+                foreach (var kvp in userVariables)
+                {
+                    allVariables[kvp.Key] = kvp.Value;
+                }
+                
+                _logger.LogDebug("Iteration using data row {Index} - BankId: {BankId}", 
+                    dataRowIndex, userVariables.GetValueOrDefault("BankId", "N/A"));
+
                 foreach (var step in enabledSteps)
                 {
                     if (cancellationToken.IsCancellationRequested)
